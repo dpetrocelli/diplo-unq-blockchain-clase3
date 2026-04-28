@@ -48,7 +48,10 @@ contract AcademicCredentials is ERC721URIStorage, Ownable {
         public
         onlyOwner
     {
-        _safeMint(student, tokenId);
+        // We use _mint (not _safeMint) because credentials are always issued to
+        // student wallets (EOAs or smart-contract wallets that already accept transfers).
+        // _mint already reverts if `student` is the zero address.
+        _mint(student, tokenId);
         _setTokenURI(tokenId, metadataURI);
         emit CredentialIssued(student, tokenId, metadataURI);
     }

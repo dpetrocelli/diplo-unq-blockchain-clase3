@@ -1,24 +1,24 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
 import {Script, console} from "forge-std/Script.sol";
-import {MyToken} from "../src/MyToken.sol";
+import {AcademicCredentials} from "../src/AcademicCredentials.sol";
 
-/// @title DeployMyToken
-/// @notice Script to deploy MyToken
-/// @dev Run with: forge script script/Deploy.s.sol --rpc-url $RPC_URL --broadcast --account dev-wallet
-contract DeployMyToken is Script {
-    function run() external returns (MyToken) {
+/// @title DeployAcademicCredentials
+/// @notice Deploys the AcademicCredentials registry. The deployer becomes the issuer.
+/// @dev    Run with:
+///         forge script script/Deploy.s.sol --rpc-url $RPC_URL --broadcast --account dev-wallet
+contract DeployAcademicCredentials is Script {
+    function run() external returns (AcademicCredentials) {
         vm.startBroadcast();
 
-        MyToken token = new MyToken();
+        AcademicCredentials credentials = new AcademicCredentials();
 
         vm.stopBroadcast();
 
-        console.log("MyToken deployed at:", address(token));
-        console.log("Initial supply:", token.totalSupply());
-        console.log("Owner:", token.owner());
+        console.log("AcademicCredentials deployed at:", address(credentials));
+        console.log("Issuer (owner):", credentials.owner());
 
-        return token;
+        return credentials;
     }
 }

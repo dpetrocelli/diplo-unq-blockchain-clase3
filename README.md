@@ -6,7 +6,7 @@ Diplomatura Blockchain UNQ — Módulo 3.
 
 Un contrato ERC-721 (NFT) llamado `AcademicCredentials` que permite a la universidad **emitir títulos verificables on-chain**. Cada título es un NFT único, asociado a la wallet del estudiante, con metadata (nombre del título, fecha, hash del PDF) en IPFS.
 
-Este contrato es la **base del trabajo final** de la diplomatura: vamos a usarlo como punto de partida y le agregaremos roles (`AccessControl`), no-transferibilidad (soulbound) y verificación pública desde un frontend.
+Este contrato es la **base del TP final** de la materia: vamos a usarlo como punto de partida y le agregaremos roles (`AccessControl`), no-transferibilidad (soulbound) y verificación pública desde un frontend.
 
 ## Pre-requisitos
 

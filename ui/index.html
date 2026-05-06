@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MicroCredenciales</title>
+
+  <!-- Vue 3 desde CDN -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <!-- Ethers.js v6 desde CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.1/ethers.umd.min.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg:        #0b0f1a;
+      --bg2:       #111827;
+      --bg3:       #1a2235;
+      --border:    rgba(99,179,237,0.12);
+      --border2:   rgba(99,179,237,0.25);
+      --accent:    #63b3ed;
+      --accent2:   #90cdf4;
+      --gold:      #f6ad55;
+      --gold2:     #fbd38d;
+      --green:     #68d391;
+      --red:       #fc8181;
+      --text:      #e2e8f0;
+      --muted:     #718096;
+      --mono:      'DM Mono', monospace;
+      --sans:      'Sora', sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 14px;
+      min-height: 100vh;
+    }
+
+    /* fondo con grid sutil */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(99,179,237,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(99,179,237,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none; z-index: 0;
+    }
+
+    #app { position: relative; z-index: 1; max-width: 860px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+    /* ---------- HEADER ---------- */
+    .header {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      margin-bottom: 2.5rem; gap: 1rem; flex-wrap: wrap;
+    }
+    .header-left h1 {
+      font-size: 22px; font-weight: 600; letter-spacing: -0.5px;
+      color: #fff; line-height: 1.2;
+    }
+    .header-left h1 span { color: var(--accent); }
+    .header-left p { font-size: 12px; color: var(--muted); margin-top: 4px; font-weight: 300; }
+
+    .network-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--bg3);
+      border: 0.5px solid var(--border2);
+      border-radius: 20px; padding: 5px 12px;
+      font-size: 11px; font-family: var(--mono); color: var(--muted);
+      margin-top: 6px;
+    }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    /* ---------- WALLET CARD ---------- */
+    .wallet-card {
+      background: var(--bg2);
+      border: 0.5px solid var(--border);
+      border-radius: 16px; padding: 1rem 1.25rem;
+      margin-bottom: 1.5rem;
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+    }
+    .wallet-info { display: flex; align-items: center; gap: 10px; }
+    .wallet-avatar {
+      width: 34px; height: 34px; border-radius: 50%;
+      background: linear-gradient(135deg, #1a365d, #2b6cb0);
+      border: 1px solid var(--border2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+    }
+    .wallet-label { font-size: 11px; color: var(--muted); }
+    .wallet-addr { font-family: var(--mono); font-size: 12px; color: var(--accent2); }
+    .wallet-addr.disconnected { color: var(--muted); font-style: italic; }
+
+    .owner-badge {
+      font-size: 10px; font-weight: 500; font-family: var(--mono);
+      padding: 2px 8px; border-radius: 4px;
+      background: rgba(246,173,85,0.12); color: var(--gold);
+      border: 0.5px solid rgba(246,173,85,0.3);
+    }
+
+    .btn {
+      font-family: var(--sans); font-size: 12px; font-weight: 500;
+      padding: 8px 18px; border-radius: 8px; border: none; cursor: pointer;
+      transition: all .15s; letter-spacing: 0.3px;
+    }
+    .btn:disabled { opacity: .35; cursor: not-allowed; }
+    .btn:active:not(:disabled) { transform: scale(0.97); }
+
+    .btn-primary {
+      background: var(--accent); color: #0b0f1a;
+    }
+    .btn-primary:hover:not(:disabled) { background: var(--accent2); }
+
+    .btn-connect {
+      background: var(--bg3); color: var(--text);
+      border: 0.5px solid var(--border2);
+    }
+    .btn-connect:hover { background: #243047; border-color: var(--accent); }
+
+    .btn-danger {
+      background: rgba(252,129,129,0.12); color: var(--red);
+      border: 0.5px solid rgba(252,129,129,0.25);
+    }
+    .btn-danger:hover:not(:disabled) { background: rgba(252,129,129,0.2); }
+
+    .btn-success {
+      background: rgba(104,211,145,0.12); color: var(--green);
+      border: 0.5px solid rgba(104,211,145,0.25);
+    }
+    .btn-success:hover:not(:disabled) { background: rgba(104,211,145,0.2); }
+
+    /* ---------- CONTRACT INFO ---------- */
+    .contract-row {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      margin-bottom: 1.5rem;
+      font-size: 11px; color: var(--muted);
+    }
+    .contract-row code {
+      font-family: var(--mono); font-size: 11px; color: var(--accent);
+      background: var(--bg3); border: 0.5px solid var(--border);
+      border-radius: 4px; padding: 2px 7px;
+      cursor: pointer; transition: border-color .15s;
+    }
+    .contract-row code:hover { border-color: var(--accent); }
+
+    /* ---------- TABS ---------- */
+    .tabs {
+      display: flex; gap: 2px;
+      background: var(--bg2); border: 0.5px solid var(--border);
+      border-radius: 12px; padding: 4px;
+      margin-bottom: 1.5rem;
+    }
+    .tab-btn {
+      flex: 1; padding: 8px 10px;
+      background: transparent; border: none; border-radius: 8px;
+      font-family: var(--sans); font-size: 12px; font-weight: 400;
+      color: var(--muted); cursor: pointer; transition: all .15s;
+      white-space: nowrap;
+    }
+    .tab-btn.active {
+      background: var(--bg3); color: var(--text); font-weight: 500;
+      border: 0.5px solid var(--border2);
+    }
+    .tab-btn:hover:not(.active) { color: var(--text); }
+
+    /* ---------- PANEL ---------- */
+    .panel { display: none; animation: fadein .2s ease; }
+    .panel.active { display: block; }
+    @keyframes fadein { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:none} }
+
+    /* ---------- FORM ---------- */
+    .form-card {
+      background: var(--bg2); border: 0.5px solid var(--border);
+      border-radius: 16px; padding: 1.5rem; margin-bottom: 1rem;
+    }
+    .form-card h2 {
+      font-size: 14px; font-weight: 500; color: var(--text);
+      margin-bottom: 1.25rem; display: flex; align-items: center; gap: 8px;
+    }
+    .form-card h2 .icon { font-size: 16px; }
+
+    .field { margin-bottom: 14px; }
+    .field label {
+      display: block; font-size: 11px; font-weight: 500; letter-spacing: 0.5px;
+      text-transform: uppercase; color: var(--muted); margin-bottom: 6px;
+    }
+    .field input, .field select {
+      width: 100%; padding: 9px 12px;
+      background: var(--bg3); border: 0.5px solid var(--border);
+      border-radius: 8px; color: var(--text);
+      font-family: var(--mono); font-size: 12px;
+      transition: border-color .15s; outline: none;
+    }
+    .field input::placeholder { color: var(--muted); font-size: 11px; }
+    .field input:focus { border-color: var(--accent); }
+    .field .hint { font-size: 10px; color: var(--muted); margin-top: 4px; }
+
+    .form-actions { display: flex; gap: 8px; margin-top: 1.25rem; }
+
+    /* ---------- RESULT ---------- */
+    .result {
+      background: var(--bg3); border: 0.5px solid var(--border);
+      border-radius: 12px; padding: 1rem 1.25rem;
+      margin-top: 1rem; font-size: 12px;
+      animation: fadein .2s ease;
+    }
+    .result.success { border-color: rgba(104,211,145,0.3); }
+    .result.error   { border-color: rgba(252,129,129,0.3); }
+    .result.loading { border-color: rgba(99,179,237,0.3); }
+
+    .result-row {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      padding: 5px 0; gap: 12px;
+      border-bottom: 0.5px solid var(--border);
+    }
+    .result-row:last-child { border-bottom: none; }
+    .result-key { color: var(--muted); white-space: nowrap; font-size: 11px; }
+    .result-val { font-family: var(--mono); font-size: 11px; color: var(--text); word-break: break-all; text-align: right; }
+    .result-val.green { color: var(--green); }
+    .result-val.red   { color: var(--red); }
+    .result-val.gold  { color: var(--gold); }
+    .result-val.blue  { color: var(--accent2); }
+
+    .result-title {
+      font-weight: 500; margin-bottom: 10px; font-size: 12px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .result-title.success { color: var(--green); }
+    .result-title.error   { color: var(--red); }
+    .result-title.loading { color: var(--accent); }
+
+    .spinner {
+      display: inline-block; width: 12px; height: 12px;
+      border: 1.5px solid rgba(99,179,237,0.3); border-top-color: var(--accent);
+      border-radius: 50%; animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ---------- TX LOG ---------- */
+    .tx-section { margin-top: 1.5rem; }
+    .tx-section h3 {
+      font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+      color: var(--muted); margin-bottom: 10px; font-weight: 500;
+    }
+    .tx-item {
+      background: var(--bg2); border: 0.5px solid var(--border);
+      border-radius: 10px; padding: 10px 14px;
+      margin-bottom: 6px; display: flex; gap: 10px; align-items: flex-start;
+      animation: fadein .2s ease;
+      transition: border-color .15s;
+    }
+    .tx-item:hover { border-color: var(--border2); }
+    .tx-item-icon { font-size: 16px; margin-top: 1px; }
+    .tx-item-body { flex: 1; min-width: 0; }
+    .tx-item-op { font-size: 12px; font-weight: 500; color: var(--text); }
+    .tx-item-detail { font-size: 11px; color: var(--muted); margin-top: 2px; font-family: var(--mono); }
+    .tx-item-hash {
+      font-size: 10px; font-family: var(--mono); color: var(--accent);
+      cursor: pointer; text-decoration: underline; text-underline-offset: 2px;
+    }
+    .tx-status {
+      font-size: 10px; font-weight: 500; padding: 2px 7px; border-radius: 4px;
+      align-self: flex-start; white-space: nowrap;
+    }
+    .tx-status.confirmed { background: rgba(104,211,145,0.12); color: var(--green); }
+    .tx-status.pending   { background: rgba(99,179,237,0.12);  color: var(--accent); }
+    .tx-status.failed    { background: rgba(252,129,129,0.12); color: var(--red); }
+
+    /* ---------- NOTIFICATION ---------- */
+    .notif {
+      position: fixed; bottom: 1.5rem; right: 1.5rem;
+      background: var(--bg3); border: 0.5px solid var(--border2);
+      border-radius: 10px; padding: 12px 16px;
+      font-size: 12px; color: var(--text);
+      max-width: 320px; z-index: 100;
+      transition: all .3s;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+    }
+    .notif.success { border-color: rgba(104,211,145,0.4); }
+    .notif.error   { border-color: rgba(252,129,129,0.4); }
+    .notif-enter-active, .notif-leave-active { transition: all .3s ease; }
+    .notif-enter-from, .notif-leave-to { opacity: 0; transform: translateY(10px); }
+
+    /* ---------- VERIFY CARD ---------- */
+    .verify-big {
+      text-align: center; padding: 2rem 1rem;
+    }
+    .verify-big .status-circle {
+      width: 72px; height: 72px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; margin: 0 auto 1rem;
+    }
+    .verify-big .status-circle.valid   { background: rgba(104,211,145,0.12); border: 1px solid rgba(104,211,145,0.3); }
+    .verify-big .status-circle.invalid { background: rgba(252,129,129,0.12); border: 1px solid rgba(252,129,129,0.3); }
+    .verify-big .status-text { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+    .verify-big .status-text.valid   { color: var(--green); }
+    .verify-big .status-text.invalid { color: var(--red); }
+    .verify-big .status-sub { font-size: 12px; color: var(--muted); }
+
+    /* ---------- FOOTER ---------- */
+    .footer {
+      margin-top: 3rem; padding-top: 1.5rem;
+      border-top: 0.5px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
+    }
+    .footer p { font-size: 11px; color: var(--muted); }
+    .footer a { color: var(--accent); text-decoration: none; }
+    .footer a:hover { text-decoration: underline; }
+
+    /* ---------- RESPONSIVE ---------- */
+    @media (max-width: 600px) {
+      .header { flex-direction: column; }
+      .tabs { overflow-x: auto; }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Notificación toast -->
+  <transition name="notif">
+    <div v-if="notif.show" class="notif" :class="notif.type">
+      {{ notif.msg }}
+    </div>
+  </transition>
+
+  <div class="header">
+    <div class="header-left">
+      <h1>Micro<span>Credenciales</span></h1>
+      <p>Desarrollo de Smart Contracts y DApps</p>
+      <div class="network-badge">
+        <span class="dot"></span>
+        Sepolia Testnet
+      </div>
+    </div>
+  </div>
+
+  <!-- Wallet card -->
+  <div class="wallet-card">
+    <div class="wallet-info">
+      <div class="wallet-avatar">{{ walletEmoji }}</div>
+      <div>
+        <div class="wallet-label">Wallet conectada</div>
+        <div class="wallet-addr" :class="{ disconnected: !account }">
+          {{ account ? formatAddr(account) : 'Sin conexión — MetaMask requerido' }}
+        </div>
+      </div>
+      <span v-if="isOwner" class="owner-badge">OWNER</span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <span v-if="account" style="font-size:11px;color:var(--muted);font-family:var(--mono)">
+        {{ balance }} ETH
+      </span>
+      <button class="btn btn-connect" @click="connectWallet">
+        {{ account ? 'Desconectar' : 'Conectar MetaMask' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Contract address -->
+  <div class="contract-row">
+    <span>Contrato:</span>
+    <code @click="copyAddr" title="Click para copiar">{{ contractAddress }}</code>
+    <span>·</span>
+    <a :href="'https://sepolia.etherscan.io/address/' + contractAddress"
+       target="_blank"
+       style="color:var(--accent);font-size:11px;text-decoration:none">
+      Ver en Etherscan ↗
+    </a>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn" :class="{active: tab==='issue'}"   @click="tab='issue'">🎓 Emitir título</button>
+    <button class="tab-btn" :class="{active: tab==='revoke'}"  @click="tab='revoke'">🔥 Revocar</button>
+    <button class="tab-btn" :class="{active: tab==='verify'}"  @click="tab='verify'">🔍 Verificar</button>
+    <button class="tab-btn" :class="{active: tab==='log'}"     @click="tab='log'">
+      📋 Log
+      <span v-if="txLog.length" style="background:var(--accent);color:#0b0f1a;border-radius:10px;padding:0 5px;font-size:10px;margin-left:4px">
+        {{ txLog.length }}
+      </span>
+    </button>
+  </div>
+
+  <!-- ===== PANEL: EMITIR ===== -->
+  <div class="panel" :class="{active: tab==='issue'}">
+    <div class="form-card">
+      <h2><span class="icon">🎓</span> Emitir credencial académica</h2>
+
+      <div class="field">
+        <label>Wallet del estudiante</label>
+        <input v-model="issueForm.student"
+               placeholder="0x..." />
+        <div class="hint">La dirección Ethereum que recibirá el NFT del título</div>
+      </div>
+
+      <div class="field">
+        <label>Token ID (N° de legajo o correlativo)</label>
+        <input v-model.number="issueForm.tokenId" type="number" min="1" placeholder="1" />
+        <div class="hint">Debe ser único — no puede repetirse</div>
+      </div>
+
+      <div class="field">
+        <label>Metadata URI</label>
+        <input v-model="issueForm.uri"
+               placeholder="ipfs://..." />
+        <div class="hint">URL del JSON con nombre del título, fecha y hash del PDF</div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-primary"
+                :disabled="!account || !isOwner || issueLoading"
+                @click="issueCredential">
+          <span v-if="issueLoading"><span class="spinner"></span> Firmando...</span>
+          <span v-else>Emitir título</span>
+        </button>
+        <button class="btn btn-connect" @click="fillExample">Cargar ejemplo</button>
+      </div>
+
+      <div v-if="!account" style="margin-top:10px;font-size:11px;color:var(--muted)">
+        ⚠ Necesitás conectar MetaMask para emitir títulos.
+      </div>
+      <div v-else-if="!isOwner" style="margin-top:10px;font-size:11px;color:var(--red)">
+        ⚠ Tu wallet no es el owner del contrato — no podés emitir títulos.
+      </div>
+    </div>
+
+    <!-- Resultado de emitir -->
+    <div v-if="issueResult" class="result" :class="issueResult.type">
+      <div class="result-title" :class="issueResult.type">
+        <span v-if="issueResult.type==='loading'"><span class="spinner"></span></span>
+        <span v-else-if="issueResult.type==='success'">✓</span>
+        <span v-else>✗</span>
+        {{ issueResult.title }}
+      </div>
+      <template v-if="issueResult.rows">
+        <div v-for="row in issueResult.rows" class="result-row">
+          <span class="result-key">{{ row.k }}</span>
+          <span class="result-val" :class="row.color">{{ row.v }}</span>
+        </div>
+      </template>
+      <div v-if="issueResult.msg" style="font-size:11px;color:var(--muted);margin-top:6px">
+        {{ issueResult.msg }}
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== PANEL: REVOCAR ===== -->
+  <div class="panel" :class="{active: tab==='revoke'}">
+    <div class="form-card">
+      <h2><span class="icon">🔥</span> Revocar credencial</h2>
+
+      <div class="field">
+        <label>Token ID a revocar</label>
+        <input v-model.number="revokeForm.tokenId" type="number" min="1" placeholder="1" />
+        <div class="hint">El token será quemado (burn). Esta acción es irreversible.</div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-danger"
+                :disabled="!account || !isOwner || revokeLoading"
+                @click="revokeCredential">
+          <span v-if="revokeLoading"><span class="spinner"></span> Revocando...</span>
+          <span v-else>Revocar título</span>
+        </button>
+      </div>
+
+      <div v-if="!account" style="margin-top:10px;font-size:11px;color:var(--muted)">
+        ⚠ Necesitás conectar MetaMask para revocar títulos.
+      </div>
+    </div>
+
+    <div v-if="revokeResult" class="result" :class="revokeResult.type">
+      <div class="result-title" :class="revokeResult.type">
+        <span v-if="revokeResult.type==='loading'"><span class="spinner"></span></span>
+        <span v-else-if="revokeResult.type==='success'">✓</span>
+        <span v-else>✗</span>
+        {{ revokeResult.title }}
+      </div>
+      <template v-if="revokeResult.rows">
+        <div v-for="row in revokeResult.rows" class="result-row">
+          <span class="result-key">{{ row.k }}</span>
+          <span class="result-val" :class="row.color">{{ row.v }}</span>
+        </div>
+      </template>
+      <div v-if="revokeResult.msg" style="font-size:11px;color:var(--muted);margin-top:6px">
+        {{ revokeResult.msg }}
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== PANEL: VERIFICAR ===== -->
+  <div class="panel" :class="{active: tab==='verify'}">
+    <div class="form-card">
+      <h2><span class="icon">🔍</span> Verificar credencial — público, sin wallet</h2>
+
+      <div class="field">
+        <label>Token ID</label>
+        <input v-model.number="verifyForm.tokenId" type="number" min="1" placeholder="1" />
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-success" :disabled="verifyLoading" @click="verifyCredential">
+          <span v-if="verifyLoading"><span class="spinner"></span> Consultando...</span>
+          <span v-else>Verificar</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Resultado verificar -->
+    <div v-if="verifyResult" class="result" :class="verifyResult.type">
+      <template v-if="verifyResult.type === 'success' && verifyResult.valid !== null">
+        <div class="verify-big">
+          <div class="status-circle" :class="verifyResult.valid ? 'valid' : 'invalid'">
+            {{ verifyResult.valid ? '✓' : '✗' }}
+          </div>
+          <div class="status-text" :class="verifyResult.valid ? 'valid' : 'invalid'">
+            {{ verifyResult.valid ? 'Título válido' : 'Título inválido o revocado' }}
+          </div>
+          <div class="status-sub">Token ID #{{ verifyForm.tokenId }}</div>
+        </div>
+        <template v-if="verifyResult.rows">
+          <div v-for="row in verifyResult.rows" class="result-row">
+            <span class="result-key">{{ row.k }}</span>
+            <span class="result-val" :class="row.color">{{ row.v }}</span>
+          </div>
+        </template>
+      </template>
+      <template v-else>
+        <div class="result-title" :class="verifyResult.type">
+          <span v-if="verifyResult.type==='loading'"><span class="spinner"></span></span>
+          <span v-else>✗</span>
+          {{ verifyResult.title }}
+        </div>
+        <div v-if="verifyResult.msg" style="font-size:11px;color:var(--muted);margin-top:6px">
+          {{ verifyResult.msg }}
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- ===== PANEL: LOG ===== -->
+  <div class="panel" :class="{active: tab==='log'}">
+    <div v-if="txLog.length === 0" style="text-align:center;padding:3rem;color:var(--muted);font-size:13px">
+      No hay transacciones aún.<br>
+      <span style="font-size:11px">Las transacciones aparecerán acá cuando interactúes con el contrato.</span>
+    </div>
+    <div v-else class="tx-section">
+      <h3>Historial de transacciones ({{ txLog.length }})</h3>
+      <div v-for="tx in txLog" class="tx-item">
+        <div class="tx-item-icon">{{ tx.icon }}</div>
+        <div class="tx-item-body">
+          <div class="tx-item-op">{{ tx.op }}</div>
+          <div class="tx-item-detail">{{ tx.detail }}</div>
+          <div v-if="tx.hash" class="tx-item-hash"
+               @click="openEtherscan(tx.hash)">
+            {{ tx.hash.slice(0,12) }}...{{ tx.hash.slice(-6) }} ↗
+          </div>
+        </div>
+        <span class="tx-status" :class="tx.status">{{ tx.status }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <p>Github: <a href="https://github.com/dpetrocelli/diplo-unq-blockchain-clase3" target="_blank">diplo-unq-blockchain-clase3</a></p>
+    <p>Tecnologias: Vue 3 CDN y Ethers.js v6 </p>
+  </div>
+
+</div>
+
+<script>
+const { createApp, ref, computed, onMounted } = Vue;
+
+// =============================================
+// CONFIGURACIÓN — EDITÁ ESTOS VALORES
+// =============================================
+const CONTRACT_ADDRESS = "0x..."; // <-- tu contrato deployado
+
+const ABI = [
+  "function issueCredential(address student, uint256 tokenId, string memory metadataURI) external",
+  "function revoke(uint256 tokenId) external",
+  "function ownerOf(uint256 tokenId) external view returns (address)",
+  "function tokenURI(uint256 tokenId) external view returns (string)",
+  "function isValid(uint256 tokenId) external view returns (bool)",
+  "function owner() external view returns (address)",
+  "function balanceOf(address owner) external view returns (uint256)"
+];
+
+// RPC público de Sepolia (sin registro requerido)
+const SEPOLIA_RPC = "https://ethereum-sepolia-rpc.publicnode.com";
+// =============================================
+
+createApp({
+  setup() {
+    const tab = ref('issue');
+    const account = ref('');
+    const balance = ref('0.000');
+    const isOwner = ref(false);
+    const contractAddress = ref(CONTRACT_ADDRESS);
+
+    const issueForm = ref({ student: '', tokenId: 1, uri: '' });
+    const revokeForm = ref({ tokenId: null });
+    const verifyForm = ref({ tokenId: null });
+
+    const issueResult  = ref(null);
+    const revokeResult = ref(null);
+    const verifyResult = ref(null);
+
+    const issueLoading  = ref(false);
+    const revokeLoading = ref(false);
+    const verifyLoading = ref(false);
+
+    const txLog = ref([]);
+    const notif = ref({ show: false, msg: '', type: 'success' });
+
+    const walletEmoji = computed(() => account.value ? '🦊' : '👤');
+
+    // ---------- Helpers ----------
+    function formatAddr(addr) {
+      return addr.slice(0, 6) + '...' + addr.slice(-4);
+    }
+
+    function showNotif(msg, type = 'success') {
+      notif.value = { show: true, msg, type };
+      setTimeout(() => notif.value.show = false, 3500);
+    }
+
+    function addTx({ icon, op, detail, hash, status }) {
+      txLog.value.unshift({ icon, op, detail, hash: hash || null, status: status || 'confirmed' });
+    }
+
+    function openEtherscan(hash) {
+      window.open('https://sepolia.etherscan.io/tx/' + hash, '_blank');
+    }
+
+    async function copyAddr() {
+      await navigator.clipboard.writeText(contractAddress.value);
+      showNotif('Dirección copiada al portapapeles', 'success');
+    }
+
+    function fillExample() {
+      issueForm.value = {
+        student: '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+        tokenId: Math.floor(Math.random() * 900) + 100,
+        uri: 'ipfs://bafybeig37ioeapbzxzgpakzznoapdgzs3sos4xuxw32a55jbqbpf2kcjx4/titulo-sistemas.json'
+      };
+    }
+
+    // ---------- Wallet ----------
+    async function connectWallet() {
+      if (account.value) {
+        account.value = '';
+        balance.value = '0.000';
+        isOwner.value = false;
+        return;
+      }
+
+      if (!window.ethereum) {
+        showNotif('MetaMask no detectado. Instalalo desde metamask.io', 'error');
+        return;
+      }
+
+      try {
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const accounts = await provider.send('eth_requestAccounts', []);
+        account.value = accounts[0];
+
+        // Verificar red Sepolia (chainId 11155111)
+        const network = await provider.getNetwork();
+        if (network.chainId !== 11155111n) {
+          try {
+            await window.ethereum.request({
+              method: 'wallet_switchEthereumChain',
+              params: [{ chainId: '0xaa36a7' }]
+            });
+          } catch (e) {
+            showNotif('Cambiá a la red Sepolia en MetaMask', 'error');
+            account.value = '';
+            return;
+          }
+        }
+
+        const bal = await provider.getBalance(account.value);
+        balance.value = parseFloat(ethers.formatEther(bal)).toFixed(4);
+
+        // Chequear si es owner
+        const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
+        try {
+          const ownerAddr = await contract.owner();
+          isOwner.value = ownerAddr.toLowerCase() === account.value.toLowerCase();
+        } catch { isOwner.value = false; }
+
+        showNotif('Wallet conectada: ' + formatAddr(account.value), 'success');
+
+        window.ethereum.on('accountsChanged', (accs) => {
+          account.value = accs[0] || '';
+          if (!accs[0]) isOwner.value = false;
+        });
+
+      } catch (e) {
+        showNotif('Error al conectar: ' + (e.message || e), 'error');
+      }
+    }
+
+    // ---------- Issue ----------
+    async function issueCredential() {
+      if (!account.value || !window.ethereum) return;
+      issueLoading.value = true;
+
+      issueResult.value = {
+        type: 'loading',
+        title: 'Esperando firma en MetaMask...',
+        rows: null
+      };
+
+      try {
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const signer   = await provider.getSigner();
+        const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+
+        const student = issueForm.value.student || '0x70997970C51812dc3A010C7d01b50e0d17dc79C8';
+        const tokenId = BigInt(issueForm.value.tokenId || 1);
+        const uri     = issueForm.value.uri || 'ipfs://placeholder';
+
+        issueResult.value.title = 'Transacción enviada, esperando confirmación...';
+        const tx = await contract.issueCredential(student, tokenId, uri);
+
+        addTx({
+          icon: '🎓', op: 'issueCredential',
+          detail: `tokenId #${tokenId.toString()} → ${formatAddr(student)}`,
+          hash: tx.hash, status: 'pending'
+        });
+
+        issueResult.value.title = 'Confirmando en la blockchain...';
+        const receipt = await tx.wait(1);
+
+        txLog.value[0].status = 'confirmed';
+
+        issueResult.value = {
+          type: 'success',
+          title: 'Título emitido correctamente',
+          rows: [
+            { k: 'Token ID',       v: '#' + tokenId.toString(),    color: 'gold' },
+            { k: 'Estudiante',     v: formatAddr(student),          color: 'blue' },
+            { k: 'URI',            v: uri.slice(0, 40) + (uri.length > 40 ? '...' : ''), color: '' },
+            { k: 'Tx Hash',        v: tx.hash.slice(0,14) + '...',  color: 'blue' },
+            { k: 'Bloque',         v: receipt.blockNumber.toString(), color: '' },
+            { k: 'Gas usado',      v: receipt.gasUsed.toString(),    color: '' },
+          ]
+        };
+        showNotif('Título #' + tokenId + ' emitido exitosamente ✓', 'success');
+
+      } catch (e) {
+        const msg = e.reason || e.message || 'Error desconocido';
+        const isTokenExists = msg.includes('InvalidSender') || msg.includes('already minted');
+        txLog.value[0] && (txLog.value[0].status = 'failed');
+
+        issueResult.value = {
+          type: 'error',
+          title: isTokenExists
+            ? 'Revert: ERC721InvalidSender — TokenId ya existe'
+            : 'Transacción revertida',
+          msg: isTokenExists
+            ? `El tokenId ${issueForm.value.tokenId} ya fue emitido. Usá un ID diferente.`
+            : msg
+        };
+        showNotif('Error: ' + (isTokenExists ? 'TokenId duplicado' : msg.slice(0,60)), 'error');
+      } finally {
+        issueLoading.value = false;
+      }
+    }
+
+    // ---------- Revoke ----------
+    async function revokeCredential() {
+      if (!account.value || !window.ethereum) return;
+      revokeLoading.value = true;
+
+      revokeResult.value = { type: 'loading', title: 'Esperando firma en MetaMask...', rows: null };
+
+      try {
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const signer   = await provider.getSigner();
+        const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+        const tokenId  = BigInt(revokeForm.value.tokenId || 1);
+
+        const tx = await contract.revoke(tokenId);
+        addTx({ icon: '🔥', op: 'revoke', detail: `tokenId #${tokenId}`, hash: tx.hash, status: 'pending' });
+
+        revokeResult.value.title = 'Esperando confirmación...';
+        const receipt = await tx.wait(1);
+        txLog.value[0].status = 'confirmed';
+
+        revokeResult.value = {
+          type: 'success',
+          title: 'Título revocado (burn exitoso)',
+          rows: [
+            { k: 'Token ID', v: '#' + tokenId.toString(), color: 'red' },
+            { k: 'Tx Hash',  v: tx.hash.slice(0,14)+'...', color: 'blue' },
+            { k: 'Bloque',   v: receipt.blockNumber.toString(), color: '' },
+          ]
+        };
+        showNotif('Token #' + tokenId + ' revocado', 'success');
+
+      } catch (e) {
+        const msg = e.reason || e.message || 'Error';
+        txLog.value[0] && (txLog.value[0].status = 'failed');
+        revokeResult.value = { type: 'error', title: 'Revert: token no existe o ya fue revocado', msg };
+        showNotif('Error al revocar', 'error');
+      } finally {
+        revokeLoading.value = false;
+      }
+    }
+
+    // ---------- Verify ----------
+    async function verifyCredential() {
+      verifyLoading.value = true;
+      verifyResult.value = { type: 'loading', title: 'Consultando la blockchain...', valid: null };
+
+      try {
+        // Verificar NO requiere wallet — usa RPC público directo
+        const provider = new ethers.JsonRpcProvider(SEPOLIA_RPC);
+        const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
+        const tokenId  = BigInt(verifyForm.value.tokenId || 1);
+
+        const [valid, owner, uri] = await Promise.all([
+          contract.isValid(tokenId).catch(() => false),
+          contract.ownerOf(tokenId).catch(() => null),
+          contract.tokenURI(tokenId).catch(() => null),
+        ]);
+
+        verifyResult.value = {
+          type: 'success',
+          title: valid ? 'Título válido' : 'Título inválido',
+          valid,
+          rows: owner ? [
+            { k: 'isValid',  v: valid ? 'true' : 'false',   color: valid ? 'green' : 'red' },
+            { k: 'ownerOf',  v: owner ? formatAddr(owner) : '—', color: 'blue' },
+            { k: 'tokenURI', v: uri   ? (uri.slice(0,40) + (uri.length > 40 ? '...' : '')) : '—', color: '' },
+          ] : []
+        };
+
+      } catch (e) {
+        verifyResult.value = {
+          type: 'error',
+          title: 'Token no encontrado',
+          valid: null,
+          msg: `El tokenId ${verifyForm.value.tokenId} no existe en el contrato.`
+        };
+      } finally {
+        verifyLoading.value = false;
+      }
+    }
+
+    return {
+      tab, account, balance, isOwner, contractAddress, walletEmoji,
+      issueForm, revokeForm, verifyForm,
+      issueResult, revokeResult, verifyResult,
+      issueLoading, revokeLoading, verifyLoading,
+      txLog, notif,
+      connectWallet, issueCredential, revokeCredential, verifyCredential,
+      formatAddr, fillExample, copyAddr, openEtherscan
+    };
+  }
+}).mount('#app');
+</script>
+</body>
+</html>

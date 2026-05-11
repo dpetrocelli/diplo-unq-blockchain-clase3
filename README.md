@@ -13,6 +13,7 @@ Este contrato es la **base del TP final** de la materia: vamos a usarlo como pun
 - Foundry (`forge`, `cast`, `anvil`) — si no lo tenés: `curl -L https://foundry.paradigm.xyz | bash && foundryup`
 - Cuenta de MetaMask en **Sepolia** con ETH de testnet
 - VS Code + extensión `juanblanco.solidity`
+- NodeJS o XAMPP
 
 ## Setup
 
@@ -125,7 +126,7 @@ Para tener una aplicación de cara al usuario, es necesario tener un web server 
     └── index.html
 ```
 
-El archivo cuneta con los siguiente campos:
+El archivo la intefaz se encuentra desarrollar con el framework de Javascript, Vue,js. La misma poseé los siguiente campos:
  - Wallet del estudiante
  - Token ID
  - URI

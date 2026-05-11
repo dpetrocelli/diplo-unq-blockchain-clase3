@@ -46,7 +46,7 @@ forge create src/AcademicCredentials.sol:AcademicCredentials \
   --broadcast
 ```
 
-### Emitir un título a alice (usando cast)
+### Emitir un título a estudiante Alice (usando cast)
 
 ```bash
 export ADDR=<dirección del contrato deployado>
@@ -72,15 +72,29 @@ cast call $ADDR "tokenURI(uint256)" 1 --rpc-url http://localhost:8545
 cast call $ADDR "isValid(uint256)" 1 --rpc-url http://localhost:8545
 ```
 
-### Deploy a Sepolia
+### Deploy a Sepolia (testnet)
 
 ```bash
 cast wallet import dev-wallet --interactive  # solo la primera vez
+# Enter y te pide private key (copias y pegas)
+# Enter y te pide password (la que quieras)
 
 forge create src/AcademicCredentials.sol:AcademicCredentials \
   --rpc-url https://ethereum-sepolia-rpc.publicnode.com \
   --account dev-wallet \
   --broadcast
+```
+### Emitir un título en la testnet
+
+```bash
+export ADDR=0x... # Dirección del contracto desplegado
+export MI_WALLET=0x # Dirección de la wallet del administrador del sistema
+
+cast send $ADDR \
+  "issueCredential(address,uint256,string)" \
+  $MI_WALLET 1 "ipfs://PLACEHOLDER" \
+  --rpc-url https://ethereum-sepolia-rpc.publicnode.com \
+  --account dev-wallet
 ```
 
 ## Estructura

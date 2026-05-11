@@ -113,6 +113,23 @@ forge create src/AcademicCredentials.sol:AcademicCredentials \
 2. Emitirle un título a tu propia wallet con un `tokenURI` placeholder
 3. Postear en el foro: la dirección del contrato + el `tokenId` del título emitido
 4. (Opcional) Subir un JSON de metadata real a Pinata/IPFS y poner el CID en el `tokenURI`
+5. (Opcional) Integrarlo con la intefaz grátifa
+
+### Interfáz grárifa (UI)
+
+Para tener una aplicación de cara al usuario, es necesario tener un web server instalado. Los más recomendados son NodeJS o XAMPP. Una vez instalados, se tiene que utilizar la estructura que se encuentra dentro de la carpeta UI.
+
+```
+.
+└── ui/
+    └── index.html
+```
+
+El archivo cuneta con los siguiente campos:
+ - Wallet del estudiante
+ - Token ID
+ - URI
+
 
 ## ¿Y para el TP final?
 
